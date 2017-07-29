@@ -1,5 +1,5 @@
-# Co-median
-*foolishly simple bi-directional wildcards!*
+# co-median
+*simple bi-directional wildcards!*
 
 For the single directional wildcard, ie: test t*st, we adapted [matcher](https://github.com/sindresorhus/matcher/blob/master/index.js) to work for node 0.10 up to 8+ . We discarded the Map object as our cache and are using the very nice [lru-cache](https://github.com/isaacs/node-lru-cache) module.
 
@@ -16,28 +16,28 @@ npm i co-median --save
 ```javascript
 
 var expect = require('expect.js');
-var Fool = require('f--l');
+var Comedian = require('co-median');
 
-var noFoolLikeA = new Fool({cache:1000});//caches replies, default is false
+var comedian = new Comedian({cache:1000});//caches replies, default is false
 
-expect(noFoolLikeA.matches('*te*st/mat', '*t*e*s*t*')).to.be(true);
-expect(noFoolLikeA.matches('*te*st/mat', '*te*st*')).to.be(true);
-expect(noFoolLikeA.matches('*e*ma*', '*test/mat')).to.be(true);
-expect(noFoolLikeA.matches('*i*g1', '*str*ing*')).to.be(true);
-expect(noFoolLikeA.matches('*ing1', '*ring*')).to.be(true);
-expect(noFoolLikeA.matches('*ing', 'test/long string*')).to.be(true);
-expect(noFoolLikeA.matches('test/long string*', '*st*ing')).to.be(true);
-expect(noFoolLikeA.matches('test/lo*', 'test/long string*')).to.be(true);
-expect(noFoolLikeA.matches('*/test/match', '*st*')).to.be(true);
-expect(noFoolLikeA.matches('*/test/match', '*st/blah')).to.be(false);
-expect(noFoolLikeA.matches('*test/match', '/test/mar*')).to.be(false);
-expect(noFoolLikeA.matches('/test/mat*', '*test/march')).to.be(false);
-expect(noFoolLikeA.matches('*/short','/test/complex/and/short')).to.be(true);
-expect(noFoolLikeA.matches('/test*/short','/test/complex/and/short')).to.be(true);
-expect(noFoolLikeA.matches('*/short','/test/complex/and/long')).to.be(false);
-expect(noFoolLikeA.matches('/test*/short','/test/complex/and/short/')).to.be(false);
+expect(comedian.matches('*te*st/mat', '*t*e*s*t*')).to.be(true);
+expect(comedian.matches('*te*st/mat', '*te*st*')).to.be(true);
+expect(comedian.matches('*e*ma*', '*test/mat')).to.be(true);
+expect(comedian.matches('*i*g1', '*str*ing*')).to.be(true);
+expect(comedian.matches('*ing1', '*ring*')).to.be(true);
+expect(comedian.matches('*ing', 'test/long string*')).to.be(true);
+expect(comedian.matches('test/long string*', '*st*ing')).to.be(true);
+expect(comedian.matches('test/lo*', 'test/long string*')).to.be(true);
+expect(comedian.matches('*/test/match', '*st*')).to.be(true);
+expect(comedian.matches('*/test/match', '*st/blah')).to.be(false);
+expect(comedian.matches('*test/match', '/test/mar*')).to.be(false);
+expect(comedian.matches('/test/mat*', '*test/march')).to.be(false);
+expect(comedian.matches('*/short','/test/complex/and/short')).to.be(true);
+expect(comedian.matches('/test*/short','/test/complex/and/short')).to.be(true);
+expect(comedian.matches('*/short','/test/complex/and/long')).to.be(false);
+expect(comedian.matches('/test*/short','/test/complex/and/short/')).to.be(false);
 
-//for more f***ing around, have a look at the tests
+//for more, have a look at the tests
 
 ```
 
