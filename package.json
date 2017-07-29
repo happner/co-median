@@ -1,0 +1,14 @@
+{
+  "name": "co-median",
+  "version": "1.1.0",
+  "scripts": {
+    "test": "mocha test"
+  },
+  "devDependencies": {
+    "expect.js": "0.3.1",
+    "mocha": "^3.4.2"
+  },
+  "dependencies": {
+    "lru-cache": "4.1.1"
+  }
+}
