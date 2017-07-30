@@ -59,13 +59,13 @@ Fool.prototype.__prepareWildPath = function(path) {
 
   var lastChar = null;
 
-  var currentChar = null;
-
   for (var i = 0; i < path.length; i++) {
-    currentChar = path[i];
 
-    if (currentChar == '*' && lastChar == '*') continue;
-    prepared += currentChar;
+    if (path[i] == '*' && lastChar == '*') continue;
+
+    prepared += path[i];
+
+    lastChar = path[i];
   }
 
   return prepared;
