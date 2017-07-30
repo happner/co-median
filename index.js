@@ -2,7 +2,7 @@
 
 var LRU = require("lru-cache");
 
-function Fool(opts){
+function Comedian(opts){
 
   if (!opts) opts = {};
 
@@ -22,7 +22,7 @@ function Fool(opts){
 
 var matchOperatorsRe = /[|\\{}()[\]^$+*?.]/g;
 
-Fool.prototype.__escapeRegex = function(str){
+Comedian.prototype.__escapeRegex = function(str){
 
   if (typeof str !== 'string') {
     throw new TypeError('Expected a string');
@@ -31,12 +31,12 @@ Fool.prototype.__escapeRegex = function(str){
   return str.replace(matchOperatorsRe, '\\$&');
 };
 
-Fool.prototype.__makeRe = function(pattern){
+Comedian.prototype.__makeRe = function(pattern){
 
   return new RegExp('^' + this.__escapeRegex(pattern).replace(/\\\*/g, '.*') + '$', 'i');
 };
 
-Fool.prototype.__makeReCache = function(pattern){
+Comedian.prototype.__makeReCache = function(pattern){
 
   if (this.__reCache.has(pattern)) return this.__reCache.get(pattern);
 
@@ -49,7 +49,7 @@ Fool.prototype.__makeReCache = function(pattern){
   return re;
 };
 
-Fool.prototype.__prepareWildPath = function(path) {
+Comedian.prototype.__prepareWildPath = function(path) {
 
   //strips out duplicate sequential wildcards, ie simon***bishop -> simon*bishop
 
@@ -71,7 +71,7 @@ Fool.prototype.__prepareWildPath = function(path) {
   return prepared;
 };
 
-Fool.prototype.__checkDiagonals = function(matrix, startY, startX){
+Comedian.prototype.__checkDiagonals = function(matrix, startY, startX){
 
   var intersection;
   var previousIntersection = null;
@@ -128,20 +128,17 @@ Fool.prototype.__checkDiagonals = function(matrix, startY, startX){
   return matched;
 };
 
-Fool.prototype.__internalMatch = function(path1, path2) {
+Comedian.prototype.__internalMatch = function(path1, path2) {
 
   path1 = this.__prepareWildPath(path1);
 
   path2 = this.__prepareWildPath(path2);
 
-  if (path1 == path2) return true;//equal to each other
+  if (path1 == path2 || (path1 == '*' || path2 == '*')) return true;//equal to each other or one is anything
 
   var path1WildcardIndex = path1.indexOf('*');
 
   var path2WildcardIndex = path2.indexOf('*');
-
-  //one is * or ** or *** etc
-  if (path1 == '*' || path2 == '*') return true;//one is anything
 
   //precise match, no wildcards
   if (path1WildcardIndex == -1 && path2WildcardIndex == -1) return path1 == path2;
@@ -150,6 +147,8 @@ Fool.prototype.__internalMatch = function(path1, path2) {
   if (path1WildcardIndex == -1) return this.__makeRe(path2).test(path1);
 
   if (path2WildcardIndex == -1) return this.__makeRe(path1).test(path2);
+
+  //build our levenshtein matrix
 
   //biggest path is our x-axis
   var vertical = (path1.length >= path2.length ? path1 : path2).split('');
@@ -177,10 +176,11 @@ Fool.prototype.__internalMatch = function(path1, path2) {
   //   console.log(row.join(' '));
   // });
 
+  //check diagonals in matrix
   return this.__checkDiagonals(matrix, 0, 0);
 };
 
-Fool.prototype.__cachedMatches = function (input, pattern) {
+Comedian.prototype.__cachedMatches = function (input, pattern) {
 
   var cacheKey = input + '<<>>' + pattern;
 
@@ -195,9 +195,9 @@ Fool.prototype.__cachedMatches = function (input, pattern) {
   return answer;
 };
 
-Fool.prototype.matches = function (input, pattern) {
+Comedian.prototype.matches = function (input, pattern) {
 
   return this.__internalMatch(input, pattern);
 };
 
-module.exports = Fool;
+module.exports = Comedian;
