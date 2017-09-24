@@ -73,9 +73,16 @@ describe('functional tests', function () {
 
     //* is ""
     expect(comedian.matches('*te*s*t/mat', '*t*e*s*t*')).to.be(true);
+    expect(comedian.matches('/test*short','/test/*/short')).to.be(true);
+    expect(comedian.matches('/test/*/short','/test/*/short')).to.be(true);
+
+    expect(comedian.matches('/test*short','/test/*/*/short')).to.be(true);
+
+    expect(comedian.matches('/test*short','/test/*/short')).to.be(true);
+
+    expect(comedian.matches('*te*s*t/mat', '*t*e*s*t*')).to.be(true);
 
     expect(comedian.matches('*te*st/mat', '*te*st*')).to.be(true);
-
 
     expect(comedian.matches('*e*ma*', '*test/mat')).to.be(true);
     expect(comedian.matches('*i*g1', '*str*ing*')).to.be(true);

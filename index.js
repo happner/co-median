@@ -75,6 +75,8 @@ Comedian.prototype.__checkDiagonals = function(matrix, startY, startX){
 
   var intersection;
   var previousIntersection = null;
+  var previousIntersectionWildY = null;
+  var previousIntersectionWildX = null;
   var matched = false;
   var columns = matrix[startY].length - startX;
   var rows = matrix.length - startY;
@@ -93,22 +95,28 @@ Comedian.prototype.__checkDiagonals = function(matrix, startY, startX){
 
         intersection = matrix[y][x];
 
+        if (intersection == '*')  {
+
+          previousIntersectionWildY = y;
+          previousIntersectionWildX = x;
+        }
+
         if (!intersection) {
 
             //this happens when one of the words has * in between letters that take up no space, ie test vs. t*e*s*t
             //causes striping (parallel diagonals starting at x + 1, y + 1 or x - 1, y - 1)
 
-            if (previousIntersection != '*' || y - 1 == startY) break;
+            if (!previousIntersectionWildY || y - 1 == startY) break;
 
-            for (var xShiftForward = x + 1; xShiftForward < columns; xShiftForward++) {
-              if (matrix[y][xShiftForward] && this.__checkDiagonals(matrix, y, xShiftForward)){
+            for (var xShiftForward = previousIntersectionWildX + 1; xShiftForward < columns; xShiftForward++) {
+              if (matrix[previousIntersectionWildY][xShiftForward] && this.__checkDiagonals(matrix, previousIntersectionWildY, xShiftForward)){
                   return true;
               }
             }
 
             if (!matched){
-              for (var xShiftBackward = x - 1; xShiftBackward >= 0; xShiftBackward--) {
-                if (matrix[y][xShiftBackward] && this.__checkDiagonals(matrix, y, xShiftBackward)) {
+              for (var xShiftBackward = previousIntersectionWildX - 1; xShiftBackward >= 0; xShiftBackward--) {
+                if (matrix[previousIntersectionWildY][xShiftBackward] && this.__checkDiagonals(matrix, previousIntersectionWildY, xShiftBackward)) {
                   return true;
                 }
               }
@@ -171,6 +179,8 @@ Comedian.prototype.__internalMatch = function(path1, path2) {
       else  matrix[horizontalIndex].push(0);
     });
   });
+
+  //this will draw the matrix, for debugging purposes - do not delete
 
   // matrix.forEach(function(row){
   //   console.log(row.join(' '));
