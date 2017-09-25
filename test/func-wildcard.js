@@ -67,25 +67,37 @@ describe('functional tests', function () {
 
   });
 
-  it('tests the wildcard matching wildcard on both sides', function(done){
+  it('tests the wildcard matching wildcard on both sides, positives', function(done){
 
     var comedian = new Comedian();
 
+    //same beginning and end, wildcard in the middle
     expect(comedian.matches('/test*short','/test/*/short')).to.be(true);
     expect(comedian.matches('/test*short','/test/*/*/short')).to.be(true);
+
+    //multiple wildcards * having no value ''
     expect(comedian.matches('*/wi*com/*', '*/*/co*m*')).to.be(true);
     expect(comedian.matches('*/wildcard*complex/*', '*/*/co*mplex*')).to.be(true);
     expect(comedian.matches('*te*s*t/mat', '*t*e*s*t*')).to.be(true);
-    expect(comedian.matches('/test/*/short','/test/*/short')).to.be(true);
     expect(comedian.matches('*te*s*t/mat', '*t*e*s*t*')).to.be(true);
     expect(comedian.matches('*te*st/mat', '*te*st*')).to.be(true);
+
+    //exact match
+    expect(comedian.matches('/test/*/short','/test/*/short')).to.be(true);
+
+
+    //loose multiple matches
     expect(comedian.matches('*e*ma*', '*test/mat')).to.be(true);
     expect(comedian.matches('*i*g1', '*str*ing*')).to.be(true);
     expect(comedian.matches('*ing1', '*ring*')).to.be(true);
+
+    //general on one side
     expect(comedian.matches('*ing', 'test/long string*')).to.be(true);
     expect(comedian.matches('test/long string*', '*st*ing')).to.be(true);
     expect(comedian.matches('test/lo*', 'test/long string*')).to.be(true);
     expect(comedian.matches('*/test/match', '*st*')).to.be(true);
+
+    //miscellaneous
     expect(comedian.matches('*/test/match', '*st/match')).to.be(true);
     expect(comedian.matches('/test/match*', '/test/match/*')).to.be(true);
     expect(comedian.matches('/test/ma*', '*tes*/ma*')).to.be(true);
@@ -93,6 +105,17 @@ describe('functional tests', function () {
     expect(comedian.matches('/test/mat*', '*test/match')).to.be(true);
     expect(comedian.matches('*test/match', '/test/match')).to.be(true);
     expect(comedian.matches('/test/mat*', '/test/match')).to.be(true);
+
+    //debatable
+    expect(comedian.matches('*w*', 's*at')).to.be(true);//swat or ***t
+
+    return done();
+  });
+
+  it('tests the wildcard matching wildcard on both sides, negatives', function(done){
+
+    var comedian = new Comedian();
+
 
     expect(comedian.matches('*test/match', '/test/ma*rch')).to.be(false);
     expect(comedian.matches('*test/mat', '*pe*st*')).to.be(false);
