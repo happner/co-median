@@ -67,23 +67,26 @@ describe('functional tests', function () {
 
   });
 
-  it('tests the wildcard matching wildcard on both sides', function(done){
+  it.only('tests the wildcard matching wildcard on both sides', function(done){
 
     var comedian = new Comedian();
 
     //* is ""
+
+    //*/wildcard*complex/*
+
+    expect(comedian.matches('*/test/match', '*st/blah')).to.be(false);
+
+    expect(comedian.matches('*/wi*com/*', '*/*/co*m*')).to.be(true);
+    expect(comedian.matches('*/wildcard*complex/*', '*/*/co*mplex*')).to.be(true);
     expect(comedian.matches('*te*s*t/mat', '*t*e*s*t*')).to.be(true);
     expect(comedian.matches('/test*short','/test/*/short')).to.be(true);
     expect(comedian.matches('/test/*/short','/test/*/short')).to.be(true);
-
+    //
     expect(comedian.matches('/test*short','/test/*/*/short')).to.be(true);
-
     expect(comedian.matches('/test*short','/test/*/short')).to.be(true);
-
     expect(comedian.matches('*te*s*t/mat', '*t*e*s*t*')).to.be(true);
-
     expect(comedian.matches('*te*st/mat', '*te*st*')).to.be(true);
-
     expect(comedian.matches('*e*ma*', '*test/mat')).to.be(true);
     expect(comedian.matches('*i*g1', '*str*ing*')).to.be(true);
     expect(comedian.matches('*ing1', '*ring*')).to.be(true);
@@ -99,13 +102,16 @@ describe('functional tests', function () {
     expect(comedian.matches('*test/match', '/test/match')).to.be(true);
     expect(comedian.matches('/test/mat*', '/test/match')).to.be(true);
 
-    expect(comedian.matches('*/test/match', '*st/blah')).to.be(false);
-    expect(comedian.matches('*test/match', '/test/mar*')).to.be(false);
-    expect(comedian.matches('/test/mat*', '*test/march')).to.be(false);
+
     expect(comedian.matches('*test/match', '/test/ma*rch')).to.be(false);
-    expect(comedian.matches('/test/mat*', '*test/march')).to.be(false);
+
     expect(comedian.matches('*test/mat', '*pe*st*')).to.be(false);
+
     expect(comedian.matches('/test/match*', '/blah/match/*')).to.be(false);
+
+    expect(comedian.matches('*test/match', '/test/mar*')).to.be(false);
+
+    expect(comedian.matches('*test/march', '/test/mat*')).to.be(false);
 
     return done();
   });
