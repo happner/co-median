@@ -81,23 +81,23 @@ describe('functional tests', function () {
     expect(comedian.matches('*te*s*t/mat', '*t*e*s*t*')).to.be(true);
     expect(comedian.matches('*te*s*t/mat', '*t*e*s*t*')).to.be(true);
     expect(comedian.matches('*te*st/mat', '*te*st*')).to.be(true);
-
-    //exact match
+    //
+    // //exact match
     expect(comedian.matches('/test/*/short','/test/*/short')).to.be(true);
-
-
-    //loose multiple matches
+    //
+    //
+    // //loose multiple matches
     expect(comedian.matches('*e*ma*', '*test/mat')).to.be(true);
     expect(comedian.matches('*i*g1', '*str*ing*')).to.be(true);
     expect(comedian.matches('*ing1', '*ring*')).to.be(true);
-
-    //general on one side
+    //
+    // //general on one side
     expect(comedian.matches('*ing', 'test/long string*')).to.be(true);
     expect(comedian.matches('test/long string*', '*st*ing')).to.be(true);
     expect(comedian.matches('test/lo*', 'test/long string*')).to.be(true);
     expect(comedian.matches('*/test/match', '*st*')).to.be(true);
-
-    //miscellaneous
+    //
+    // //miscellaneous
     expect(comedian.matches('*/test/match', '*st/match')).to.be(true);
     expect(comedian.matches('/test/match*', '/test/match/*')).to.be(true);
     expect(comedian.matches('/test/ma*', '*tes*/ma*')).to.be(true);
@@ -105,9 +105,15 @@ describe('functional tests', function () {
     expect(comedian.matches('/test/mat*', '*test/match')).to.be(true);
     expect(comedian.matches('*test/match', '/test/match')).to.be(true);
     expect(comedian.matches('/test/mat*', '/test/match')).to.be(true);
-
-    //debatable
+    //
+    // //varied lengths
+    expect(comedian.matches('*t', 'wai/*/*/*t')).to.be(true);
+    expect(comedian.matches('t*', 't/*/*/l')).to.be(true);
+    //
+    //
+    // //debatable
     expect(comedian.matches('*w*', 's*at')).to.be(true);//swat or ***t
+    expect(comedian.matches('t*lle', '*william/*')).to.be(true); //william tell
 
     return done();
   });
@@ -116,15 +122,33 @@ describe('functional tests', function () {
 
     var comedian = new Comedian();
 
-
+    //non matching end
     expect(comedian.matches('*test/match', '/test/ma*rch')).to.be(false);
-    expect(comedian.matches('*test/mat', '*pe*st*')).to.be(false);
-    expect(comedian.matches('/test/match*', '/blah/match/*')).to.be(false);
-    expect(comedian.matches('*test/match', '/test/mar*')).to.be(false);
-    expect(comedian.matches('*test/march', '/test/mat*')).to.be(false);
     expect(comedian.matches('*/test/match', '*st/blah')).to.be(false);
 
+    //non matching beginning
+    expect(comedian.matches('test/ma*ch', '/tst/ma*rch')).to.be(false);
+    expect(comedian.matches('/test/match*', '/blah/match/*')).to.be(false);
+
+    //lots of wildcards in one, bad end
+    expect(comedian.matches('*test/mat', '*pe*st*')).to.be(false);
+
+    //no wildcard in the middle, bad end
+    expect(comedian.matches('*test/match', '/test/mar*')).to.be(false);
+    expect(comedian.matches('*test/march', '/test/mat*')).to.be(false);
+
     return done();
+  });
+
+  it('tests wildcard matching, wildcard on both sides, where 2 compares enclose a search term with wildcards', function (done) {
+
+    var comedian = new Comedian();
+
+    expect(comedian.matches('*test/', 'test/*')).to.be(true);
+
+    expect(comedian.matches('*test/', 'test*')).to.be(true);
+
+    done();
   });
 
 });

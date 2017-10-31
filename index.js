@@ -134,11 +134,9 @@ Comedian.prototype.__checkDiagonals = function(matrix, startY, startX){
 
 Comedian.prototype.__internalMatch = function(path1, path2) {
 
-  path1 = this.__prepareWildPath(path1);
+  if (path1 == path2) return true;
 
-  path2 = this.__prepareWildPath(path2);
-
-  if (path1 == path2 || (path1 == '*' || path2 == '*')) return true;//equal to each other or one is anything
+  if (path1 == null || path2 == null) return false;
 
   var path1WildcardIndex = path1.indexOf('*');
 
@@ -151,6 +149,12 @@ Comedian.prototype.__internalMatch = function(path1, path2) {
   if (path1WildcardIndex == -1) return this.__makeRe(path2).test(path1);
 
   if (path2WildcardIndex == -1) return this.__makeRe(path1).test(path2);
+
+  path1 = this.__prepareWildPath(path1);
+
+  path2 = this.__prepareWildPath(path2);
+
+  if (path1 == '*' || path2 == '*') return true;//one is anything, after prepare removes superfluous *'s
 
   //build our levenshtein matrix
 
@@ -169,6 +173,8 @@ Comedian.prototype.__internalMatch = function(path1, path2) {
 
       if (!matrix[horizontalIndex]) matrix[horizontalIndex] = [];
 
+      if (horizontalChar == '0' && verticalChar == '0') horizontalChar = '*';
+
       if (horizontalChar == verticalChar || horizontalChar == '*' || verticalChar == '*')
         matrix[horizontalIndex].push(horizontalChar);
 
@@ -176,12 +182,19 @@ Comedian.prototype.__internalMatch = function(path1, path2) {
     });
   });
 
-  // matrix.forEach(function(row){
+  var preparedMatrix = [];
+
+  matrix.forEach(function(row, rowIndex){
+    if (matrix.length > 2 && rowIndex == 0 && row[0] == '*') return;
+    preparedMatrix.push(row);
+  });
+
+  // preparedMatrix.forEach(function(row){
   //   console.log(row.join(' '));
   // });
 
   //check diagonals in matrix
-  return this.__checkDiagonals(matrix, 0, 0);
+  return this.__checkDiagonals(preparedMatrix, 0, 0);
 };
 
 Comedian.prototype.__cachedMatches = function (input, pattern) {
