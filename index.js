@@ -71,65 +71,61 @@ Comedian.prototype.__prepareWildPath = function(path) {
   return prepared;
 };
 
-Comedian.prototype.__checkDiagonals = function(matrix, startY, startX){
+Comedian.prototype.__sliceMatrixUp = function(matrix, x, y){
 
-  var intersection;
-  var previousIntersection = null;
-  var previousWildCoordinates = null;
-  var matched = false;
-  var columns = matrix[startY].length - startX;
-  var rows = matrix.length - startY;
-  var x = 0;
-  var depth = 0;
+  var sliced = [];
 
-  //walk through the matrix looking for diagonals
-  for (var currentColumn = startX; currentColumn < matrix[0].length; currentColumn++) {
+  matrix.slice(0, y - 1).forEach(function(row){
+    sliced.push(row.slice(x));
+  });
 
-    if (matrix[startY][currentColumn] != 0) {//if we have a * or character at the top, we start looping through the diagonal
+  return sliced;
+};
 
-      x = currentColumn;
+Comedian.prototype.__sliceMatrixDown = function(matrix, x, y){
 
-      depth = 1;
+  var sliced = [];
 
-      for (var y = startY; y < matrix.length; y++) {
+  matrix.slice(y).forEach(function(row){
+    sliced.push(row.slice(x));
+  });
 
-        if (x >= matrix[0].length) break;
-
-        intersection = matrix[y][x];
-
-        if (!intersection) {
-
-          //this happens when one of the words has * in between letters that take up no space, ie test vs. t*e*s*t
-          //causes striping (parallel diagonals starting at x + 1, y + 1 or x - 1, y - 1)
-
-          if (previousWildCoordinates == null || y - 1 == startY) break;
+  return sliced;
+};
 
 
-          for (var xShiftForward = previousWildCoordinates[0] + 1; xShiftForward < columns; xShiftForward++) {
-            if (this.__checkDiagonals(matrix, previousWildCoordinates[1], xShiftForward)) return true;
-          }
+Comedian.prototype.__checkPrunedDiagonals = function(diagonals){
 
-          if (!matched){
-            for (var xShiftBackward = previousWildCoordinates[0] - 1; xShiftBackward >= 0; xShiftBackward--) {
-              if (this.__checkDiagonals(matrix, previousWildCoordinates[1], xShiftBackward)) return true;
-            }
-          }
-        } else {
+  var _this = this;
 
-          if (intersection == '*' && y != 0) previousWildCoordinates = [x, y];
-        }
+  for (var vector = diagonals.length - 1; vector >= 0; vector --){
 
-        depth++;
-        x++;
+    var lastWildcard = -1;
 
-        if (depth == rows) return true;
+    var diagonal = diagonals[vector];
 
-        previousIntersection = intersection;
+    if (diagonal[0] == 0) continue;//we cannot start with 0
+
+    for (var width = 0; width < diagonal.length; width++){
+
+      var intersection = diagonal[width];
+
+      if (intersection == 0) {
+
+        if (lastWildcard == -1) break;//dead end
+
+        if (_this.__checkPrunedDiagonals(_this.__sliceMatrixUp(diagonals, lastWildcard + 1, vector + 1))) return true;
+
+        return _this.__checkPrunedDiagonals(_this.__sliceMatrixDown(diagonals, lastWildcard + 1, vector + 1));
       }
+
+      if (width == diagonal.length - 1) return true;
+
+      if (intersection == '*') lastWildcard = width;
     }
   }
 
-  return matched;
+  return false;
 };
 
 Comedian.prototype.__internalMatch = function(path1, path2) {
@@ -157,12 +153,16 @@ Comedian.prototype.__internalMatch = function(path1, path2) {
   if (path1 == '*' || path2 == '*') return true;//one is anything, after prepare removes superfluous *'s
 
   //build our levenshtein matrix
+  return this.__checkMatrix(path1, path2);
+};
+
+Comedian.prototype.__checkMatrix = function(str1, str2){
 
   //biggest path is our x-axis
-  var vertical = (path1.length >= path2.length ? path1 : path2).split('');
+  var vertical = (str1.length >= str2.length ? str1 : str2).split('');
 
   //smallest path is our y-axis
-  var horizontal = (path1.length < path2.length ? path1 : path2).split('');
+  var horizontal = (str1.length < str2.length ? str1 : str2).split('');
 
   var matrix = [];
 
@@ -173,19 +173,27 @@ Comedian.prototype.__internalMatch = function(path1, path2) {
 
       if (!matrix[horizontalIndex]) matrix[horizontalIndex] = [];
 
-      if (horizontalChar == '0' && verticalChar == '0') horizontalChar = '*';
+      //we ensure strings with zero dont affact our results
+      if (horizontalChar === '0') horizontalChar = 1;
+      if (verticalChar === '0') verticalChar = 1;
 
-      if (horizontalChar == verticalChar || horizontalChar == '*' || verticalChar == '*')
+      if (horizontalChar == '*' || verticalChar == '*') matrix[horizontalIndex].push('*');
+      else if (horizontalChar == verticalChar)
         matrix[horizontalIndex].push(horizontalChar);
-
       else  matrix[horizontalIndex].push(0);
     });
   });
 
+  // matrix.forEach(function(row){
+  //   console.log(row.join(' '));
+  // });
+
   var preparedMatrix = [];
 
+  //remove any leading or closing *'s
   matrix.forEach(function(row, rowIndex){
     if (matrix.length > 2 && rowIndex == 0 && row[0] == '*') return;
+    if (matrix.length > 2 && rowIndex == matrix.length - 1 && row[0] == '*') return;
     preparedMatrix.push(row);
   });
 
@@ -193,8 +201,81 @@ Comedian.prototype.__internalMatch = function(path1, path2) {
   //   console.log(row.join(' '));
   // });
 
-  //check diagonals in matrix
-  return this.__checkDiagonals(preparedMatrix, 0, 0);
+  return this.__buildDiagonalMatrix(preparedMatrix);
+
+};
+
+Comedian.prototype.__pruneDiagonalMatrix = function(diagonals){
+
+  // diagonals.forEach(function(row){
+  //   console.log(row.join(' '));
+  // });
+
+  var pruned = [];
+
+  //first score our diagonals, strip out ones that have no wildcards and are not long enough
+  for (var vector = diagonals.length - 1; vector >= 0; vector --){
+
+    var score = 0;
+    var width = 0;
+
+    var hasWildcard = false;
+    var diagonal = diagonals[vector];
+
+    diagonal.forEach(function(intersection){
+      width++;
+      if (intersection != 0) score++;
+      if (intersection == '*') hasWildcard = true;
+    });
+
+    if (width < diagonals.ylen) continue;
+
+    if (score == diagonals.ylen) return true;//we have a complete diagonal
+
+    if (hasWildcard) pruned.push(diagonal);
+  }
+
+  // pruned.forEach(function(row){
+  //   console.log(row.join(' '));
+  // });
+
+  if (pruned.length <= 1) return false;//no clear diagonal and nothing to compare to
+
+  return this.__checkPrunedDiagonals(pruned);
+};
+
+Comedian.prototype.__buildDiagonalMatrix = function(matrix){
+
+  var array = matrix;
+
+  var Ylength = array.length;
+  var Xlength = array[0].length;
+
+  var maxLength = Math.max(Xlength, Ylength);
+
+  var diagonals = [];
+
+  diagonals.ylen = Ylength;
+  diagonals.xlen = Xlength;
+
+  var temp;
+
+  for (var k = 0; k <= 2 * (maxLength - 1); ++k) {
+
+    temp = [];
+
+    for (var y = Ylength - 1; y >= 0; --y) {
+      var x = k - (Ylength - y);
+      if (x >= 0 && x < Xlength) {
+        temp.push(array[y][x]);
+      }
+    }
+    if(temp.length > 0) {
+      diagonals.push(temp.reverse());
+    }
+  }
+
+  return this.__pruneDiagonalMatrix(diagonals);
 };
 
 Comedian.prototype.__cachedMatches = function (input, pattern) {
@@ -213,7 +294,6 @@ Comedian.prototype.__cachedMatches = function (input, pattern) {
 };
 
 Comedian.prototype.matches = function (input, pattern) {
-  //console.log('matching:::', input, pattern);
   return this.__internalMatch(input, pattern);
 };
 
