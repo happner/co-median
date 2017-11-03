@@ -88,4 +88,73 @@ describe('sanity tests', function () {
     done();
   });
 
+  it('ensures the readme tests are working', function(){
+
+    var expect = require('expect.js');
+    var Comedian = require('..');
+
+    var comedian = new Comedian({cache:1000});//caches replies, default is false
+
+    //same beginning and end, wildcard in the middle
+    expect(comedian.matches('/test*short','/test/*/short')).to.be(true);
+    expect(comedian.matches('/test*short','/test/*/*/short')).to.be(true);
+
+    //multiple wildcards * having no value ''
+    expect(comedian.matches('*/wi*com/*', '*/*/co*m*')).to.be(true);
+    expect(comedian.matches('*/wildcard*complex/*', '*/*/co*mplex*')).to.be(true);
+    expect(comedian.matches('*te*s*t/mat', '*t*e*s*t*')).to.be(true);
+    expect(comedian.matches('*te*s*t/mat', '*t*e*s*t*')).to.be(true);
+    expect(comedian.matches('*te*st/mat', '*te*st*')).to.be(true);
+
+    //exact match
+    expect(comedian.matches('/test/*/short','/test/*/short')).to.be(true);
+
+    //loose multiple matches
+    expect(comedian.matches('*e*ma*', '*test/mat')).to.be(true);
+
+    expect(comedian.matches('*i*g1', '*str*ing*')).to.be(true);
+    expect(comedian.matches('*ing1', '*ring*')).to.be(true);
+
+    // //general on one side
+    expect(comedian.matches('*ing', 'test/long string*')).to.be(true);
+    expect(comedian.matches('test/long string*', '*st*ing')).to.be(true);
+    expect(comedian.matches('test/lo*', 'test/long string*')).to.be(true);
+    expect(comedian.matches('*/test/match', '*st*')).to.be(true);
+
+    // //miscellaneous
+    expect(comedian.matches('*/test/match', '*st/match')).to.be(true);
+    expect(comedian.matches('/test/match*', '/test/match/*')).to.be(true);
+    expect(comedian.matches('/test/ma*', '*tes*/ma*')).to.be(true);
+    expect(comedian.matches('*test/match', '/test/mat*')).to.be(true);
+    expect(comedian.matches('/test/mat*', '*test/match')).to.be(true);
+    expect(comedian.matches('*test/match', '/test/match')).to.be(true);
+    expect(comedian.matches('/test/mat*', '/test/match')).to.be(true);
+
+    // varied lengths
+    expect(comedian.matches('*t', 'wai/*/*/*t')).to.be(true);
+    expect(comedian.matches('t*', 't/*/*/l')).to.be(true);
+
+    // debatable...
+    expect(comedian.matches('*w*', 's*at')).to.be(true);
+
+    // negatives:
+
+    //non matching end
+    expect(comedian.matches('*/test/match', '*st/blah')).to.be(false);
+    expect(comedian.matches('*test/match', '/test/ma*rch')).to.be(false);
+
+    //non matching beginning
+    expect(comedian.matches('test/ma*ch', '/tst/ma*rch')).to.be(false);
+    expect(comedian.matches('/test/match*', '/blah/match/*')).to.be(false);
+
+    //no wildcard in the middle, bad end
+    expect(comedian.matches('*test/match', '/test/mar*')).to.be(false);
+    expect(comedian.matches('*test/march', '/test/mat*')).to.be(false);
+
+    //complex both sides but not matching a discernable pattern
+    expect(comedian.matches('t*lle', '*william/*')).to.be(false);
+    expect(comedian.matches('*test/mat', '*pe*st*')).to.be(false);
+
+  })
+
 });
