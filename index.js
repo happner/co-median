@@ -1,6 +1,7 @@
 'use strict';
 
 var LRU = require("lru-cache");
+var PF = require('pathfinding');
 
 function Comedian(opts){
 
@@ -22,11 +23,18 @@ function Comedian(opts){
 
 var matchOperatorsRe = /[|\\{}()[\]^$+*?.]/g;
 
+Comedian.prototype.__printMatrix = function(matrix, name){
+
+  console.log('printing matrx:::', name);
+  //for testing purposes
+  matrix.forEach(function(row){
+    console.log(row.join(' '));
+  });
+};
+
 Comedian.prototype.__escapeRegex = function(str){
 
-  if (typeof str !== 'string') {
-    throw new TypeError('Expected a string');
-  }
+  if (typeof str !== 'string') throw new TypeError('Expected a string');
 
   return str.replace(matchOperatorsRe, '\\$&');
 };
@@ -47,6 +55,17 @@ Comedian.prototype.__makeReCache = function(pattern){
   this.__reCache.set(pattern, re);
 
   return re;
+};
+
+Comedian.prototype.__rpad = function(arr, char, width){
+
+  //console.log('__rpad:::', arr, char, width);
+
+  var length = arr.length;
+
+  for (var i = 0; i < width - length; i++) arr.push(char);
+
+  return arr;
 };
 
 Comedian.prototype.__prepareWildPath = function(path) {
@@ -71,64 +90,60 @@ Comedian.prototype.__prepareWildPath = function(path) {
   return prepared;
 };
 
-Comedian.prototype.__sliceMatrixUp = function(matrix, x, y){
+Comedian.prototype.__walkTheMaze = function(grid, startPoint, endPoint){
 
-  var sliced = [];
-
-  matrix.slice(0, y - 1).forEach(function(row){
-    sliced.push(row.slice(x));
+  var pathFinder = new PF.AStarFinder({
+    allowDiagonal: false
   });
 
-  return sliced;
+  return pathFinder.findPath(startPoint[0], startPoint[1], endPoint[0], endPoint[1], grid).length > 0;
 };
-
-Comedian.prototype.__sliceMatrixDown = function(matrix, x, y){
-
-  var sliced = [];
-
-  matrix.slice(y).forEach(function(row){
-    sliced.push(row.slice(x));
-  });
-
-  return sliced;
-};
-
 
 Comedian.prototype.__checkPrunedDiagonals = function(diagonals){
 
-  var _this = this;
+  var startPoints = [];
+  var endPoints = [];
 
-  for (var vector = diagonals.length - 1; vector >= 0; vector --){
+  if (diagonals.length == 0) return false;
 
-    var lastWildcard = -1;
+  var grid = new PF.Grid(diagonals[0].length, diagonals.length);
 
-    var diagonal = diagonals[vector];
+  for (var rowIndex = 0; rowIndex < diagonals.length; rowIndex++){
 
-    if (diagonal[0] == 0) continue;//we cannot start with 0
+    var row = diagonals[rowIndex];
 
-    for (var width = 0; width < diagonal.length; width++){
+    row.forEach(function(column, columnIndex){
+      if (column !== 0)
+        grid.setWalkableAt(columnIndex, rowIndex, true);
+      else
+        grid.setWalkableAt(columnIndex, rowIndex, false);
+    });
 
-      var intersection = diagonal[width];
+    if (row[0] != 0) startPoints.push([0, rowIndex]);
 
-      if (intersection == 0) {
+    if (row[row.length - 1] != 0) endPoints.push([row.length - 1, rowIndex]);
+  }
 
-        if (lastWildcard == -1) break;//dead end
+  if (startPoints.length == 0) return false;// we could never begin as the whole grid starts with 0 at x:0
 
-        if (_this.__checkPrunedDiagonals(_this.__sliceMatrixUp(diagonals, lastWildcard + 1, vector + 1))) return true;
+  if (endPoints.length == 0) return false;// we could never begin as the whole grid ends with 0 at x:grid.length
 
-        return _this.__checkPrunedDiagonals(_this.__sliceMatrixDown(diagonals, lastWildcard + 1, vector + 1));
-      }
+  for (var startPointIndex = 0; startPointIndex < startPoints.length; startPointIndex++){
 
-      if (width == diagonal.length - 1) return true;
+    for (var endPointIndex = 0; endPointIndex < endPoints.length; endPointIndex++){
 
-      if (intersection == '*') lastWildcard = width;
+      if (this.__walkTheMaze(grid.clone(), startPoints[startPointIndex], endPoints[endPointIndex], diagonals.length)) return true;
     }
   }
 
   return false;
 };
 
-Comedian.prototype.__internalMatch = function(path1, path2) {
+Comedian.prototype.__internalMatch = function(str1, str2) {
+
+  var path1 = this.__prepareWildPath(str1);
+
+  var path2 = this.__prepareWildPath(str2);
 
   if (path1 == path2) return true;
 
@@ -138,25 +153,58 @@ Comedian.prototype.__internalMatch = function(path1, path2) {
 
   var path2WildcardIndex = path2.indexOf('*');
 
-  //precise match, no wildcards
-  if (path1WildcardIndex == -1 && path2WildcardIndex == -1) return path1 == path2;
-
   //if we only have a wildcard on one side, use conventional means
   if (path1WildcardIndex == -1) return this.__makeRe(path2).test(path1);
 
   if (path2WildcardIndex == -1) return this.__makeRe(path1).test(path2);
 
-  path1 = this.__prepareWildPath(path1);
+  var untrimmed = this.__buildMatrix(path1, path2, false);
 
-  path2 = this.__prepareWildPath(path2);
+  //build and check our matrix
+  if (this.__checkDiagonalMatrix(untrimmed)) return true;
 
-  if (path1 == '*' || path2 == '*') return true;//one is anything, after prepare removes superfluous *'s
+  var trimmed = this.__buildMatrix(path1, path2, true);
 
-  //build our levenshtein matrix
-  return this.__checkMatrix(path1, path2);
+  return this.__checkDiagonalMatrix(trimmed);
 };
 
-Comedian.prototype.__checkMatrix = function(str1, str2){
+Comedian.prototype.__trimMatrix = function(matrix){
+
+  var preparedMatrix = [];
+
+  var rightVerticalScore = 0, leftVerticalScore = 0;
+
+  matrix.forEach(function(row, rowIndex){
+
+    if (row[0] == '*') leftVerticalScore++;
+    //
+    if (row[row.length - 1] == '*') rightVerticalScore++;
+
+    if (rowIndex == matrix.length - 1 && row.join('').replace(/\*/g, '') == '') return;
+
+    if (rowIndex == 0 && row.join('').replace(/\*/g, '') == '') return;
+
+    preparedMatrix.push(row);
+  });
+
+  if (leftVerticalScore == matrix.length){
+    preparedMatrix.forEach(function(row){
+      row.shift();
+    });
+  }
+
+  if (rightVerticalScore == matrix.length){
+    preparedMatrix.forEach(function(row){
+      row.pop();
+    });
+  }
+
+  //this.__printMatrix(preparedMatrix, 'prepared');
+
+  return preparedMatrix;
+};
+
+Comedian.prototype.__buildMatrix = function(str1, str2, trim){
 
   //biggest path is our x-axis
   var vertical = (str1.length >= str2.length ? str1 : str2).split('');
@@ -178,38 +226,64 @@ Comedian.prototype.__checkMatrix = function(str1, str2){
       if (verticalChar === '0') verticalChar = 1;
 
       if (horizontalChar == '*' || verticalChar == '*') matrix[horizontalIndex].push('*');
-      else if (horizontalChar == verticalChar)
-        matrix[horizontalIndex].push(horizontalChar);
+      else if (horizontalChar == verticalChar) matrix[horizontalIndex].push(horizontalChar);
       else  matrix[horizontalIndex].push(0);
     });
   });
 
-  // matrix.forEach(function(row){
-  //   console.log(row.join(' '));
-  // });
+  if (trim) return this.__buildDiagonalMatrix(this.__trimMatrix(matrix));
 
-  var preparedMatrix = [];
-
-  //remove any leading or closing *'s
-  matrix.forEach(function(row, rowIndex){
-    if (matrix.length > 2 && rowIndex == 0 && row[0] == '*') return;
-    if (matrix.length > 2 && rowIndex == matrix.length - 1 && row[0] == '*') return;
-    preparedMatrix.push(row);
-  });
-
-  // preparedMatrix.forEach(function(row){
-  //   console.log(row.join(' '));
-  // });
-
-  return this.__buildDiagonalMatrix(preparedMatrix);
-
+  return this.__buildDiagonalMatrix(matrix);
 };
 
-Comedian.prototype.__pruneDiagonalMatrix = function(diagonals){
+Comedian.prototype.__buildDiagonalMatrix = function(matrix){
 
-  // diagonals.forEach(function(row){
-  //   console.log(row.join(' '));
-  // });
+  var array = matrix;
+
+  var Ylength = array.length;
+  var Xlength = array[0].length;
+
+  var maxLength = Math.max(Xlength, Ylength);
+
+  var diagonals = [];
+
+  var temp;
+
+  for (var k = 0; k <= 2 * (maxLength - 1); ++k) {
+
+    temp = [];
+
+    var width = 0;
+    var hasWildcard = false;
+
+    for (var y = Ylength - 1; y >= 0; --y) {
+
+      var x = k - (Ylength - y);
+
+      if (x >= 0 && x < Xlength) {
+        width++;
+        if (array[y][x] == '*') hasWildcard = true;
+        temp.push(array[y][x]);
+      }
+    }
+
+    if (temp.length < Ylength && !hasWildcard) continue;
+
+    temp = this.__rpad(temp, 0, Ylength);
+
+    temp.reverse();
+
+    diagonals.push(temp);
+  }
+
+  ////this.__printMatrix(diagonals, 'diagonals');
+
+  return diagonals;
+};
+
+Comedian.prototype.__checkDiagonalMatrix = function(diagonals){
+
+  ////this.__printMatrix(diagonals, 'diagonals');
 
   var pruned = [];
 
@@ -228,54 +302,18 @@ Comedian.prototype.__pruneDiagonalMatrix = function(diagonals){
       if (intersection == '*') hasWildcard = true;
     });
 
-    if (width < diagonals.ylen) continue;
+    if (!hasWildcard && width < diagonals.length) continue;
 
-    if (score == diagonals.ylen) return true;//we have a complete diagonal
+    if (score == diagonal.length) return true;//we have a complete diagonal
 
-    if (hasWildcard) pruned.push(diagonal);
+    pruned.push(diagonal);
   }
 
-  // pruned.forEach(function(row){
-  //   console.log(row.join(' '));
-  // });
+  //this.__printMatrix(pruned, 'pruned');
 
-  if (pruned.length <= 1) return false;//no clear diagonal and nothing to compare to
+  //snakes and ladders time
 
-  return this.__checkPrunedDiagonals(pruned);
-};
-
-Comedian.prototype.__buildDiagonalMatrix = function(matrix){
-
-  var array = matrix;
-
-  var Ylength = array.length;
-  var Xlength = array[0].length;
-
-  var maxLength = Math.max(Xlength, Ylength);
-
-  var diagonals = [];
-
-  diagonals.ylen = Ylength;
-  diagonals.xlen = Xlength;
-
-  var temp;
-
-  for (var k = 0; k <= 2 * (maxLength - 1); ++k) {
-
-    temp = [];
-
-    for (var y = Ylength - 1; y >= 0; --y) {
-      var x = k - (Ylength - y);
-      if (x >= 0 && x < Xlength) {
-        temp.push(array[y][x]);
-      }
-    }
-    if(temp.length > 0) {
-      diagonals.push(temp.reverse());
-    }
-  }
-
-  return this.__pruneDiagonalMatrix(diagonals);
+  return this.__checkPrunedDiagonals(pruned, diagonals);
 };
 
 Comedian.prototype.__cachedMatches = function (input, pattern) {
