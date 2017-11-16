@@ -1,3 +1,6 @@
+# discontinued
+there are still edge cases which I simply have no more time to solve. Until we have time to come back to this problem, this library will remain in an unsupported state.
+
 # co-median
 *bi-directional wildcards*
 
